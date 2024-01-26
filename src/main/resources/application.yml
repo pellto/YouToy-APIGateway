@@ -3,8 +3,8 @@ server:
 
 eureka:
   client:
-    register-with-eureka: false
-    fetch-registry: false
+    register-with-eureka: true
+    fetch-registry: true
     service-url:
       defaultZone: http://localhost:8761/eureka
 
@@ -13,9 +13,16 @@ spring:
     name: youtoy-apigateway
   cloud:
     gateway:
-      mvc:
-        routes:
-          - id: youtoy-service
-            uri: http://localhost:8080/
-            predicates:
-              - Path=/**
+      routes:
+        - id: youtoy-swagger-service
+          uri: http://localhost:8080/
+          predicates:
+            - Path=/swagger-ui/**, /v3/**
+
+        - id: youtoy-service
+          uri: http://localhost:8080/
+          predicates:
+            - Path=/members/**,
+              /subscribes/**, /channels/**, /memberships/**, /channelManagements/**
+          filters:
+            - UserAuthorizationHeaderFilter
