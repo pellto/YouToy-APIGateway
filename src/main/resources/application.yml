@@ -25,4 +25,7 @@ spring:
             - Path=/members/**,
               /subscribes/**, /channels/**, /memberships/**, /channelManagements/**
           filters:
-            - UserAuthorizationHeaderFilter
+            - name: CacheRequestBody
+              args:
+                bodyClass: java.util.LinkedHashMap
+            - AuthorizationHeaderFilter
