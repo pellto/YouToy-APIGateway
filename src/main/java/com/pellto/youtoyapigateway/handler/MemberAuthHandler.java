@@ -7,13 +7,14 @@ import org.springframework.http.server.RequestPath;
 import org.springframework.stereotype.Component;
 
 @Component
-public class MemberAuthHandler {
+public class MemberAuthHandler implements AuthHandler {
 
   private static final String ROOT_PATH = "/members";
 
   public MemberAuthHandler() {
   }
 
+  @Override
   public boolean checkValidAccess(
       RequestPath path,
       HttpMethod method,

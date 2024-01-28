@@ -1,5 +1,6 @@
 package com.pellto.youtoyapigateway.filter;
 
+import com.pellto.youtoyapigateway.handler.ChannelAuthHandler;
 import com.pellto.youtoyapigateway.handler.MemberAuthHandler;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
@@ -25,6 +26,7 @@ public class AuthorizationHeaderFilter extends
     AbstractGatewayFilterFactory<AbstractGatewayFilterFactory.NameConfig> {
 
   private final MemberAuthHandler memberAuthHandler = new MemberAuthHandler();
+  private final ChannelAuthHandler channelAuthHandler = new ChannelAuthHandler();
 
   // TODO: setting env or another config
   private static final String SECRET_KEY = "SZPqwwAV8Wzf8Dc5gqduTbdu8Kdou26P"
@@ -49,7 +51,6 @@ public class AuthorizationHeaderFilter extends
   public GatewayFilter apply(NameConfig config) {
     return (exchange, chain) -> {
       ServerHttpRequest request = exchange.getRequest();
-      System.out.println("exchange = " + exchange);
 
       if (!request.getHeaders().containsKey(HttpHeaders.AUTHORIZATION)) {
         return onError(exchange, "no authorization header", HttpStatus.UNAUTHORIZED);
@@ -72,15 +73,15 @@ public class AuthorizationHeaderFilter extends
       var path = request.getPath();
       var uri = request.getURI();
       var method = request.getMethod();
-      System.out.println("uri = " + uri);
-      System.out.println("body = " + body);
-      System.out.println("path = " + path);
-      System.out.println("subject = " + subject);
-      System.out.println("method = " + method);
 
       if (path.toString().contains("members") && !memberAuthHandler.checkValidAccess(path, method,
           body, subject)) {
+        return onError(exchange, "Invalid Member Access.", HttpStatus.FORBIDDEN);
+      }
 
+      if (path.toString().contains("channels") && !channelAuthHandler.checkValidAccess(path, method,
+          body, subject)) {
+        return onError(exchange, "Invalid Channel Access.", HttpStatus.FORBIDDEN);
       }
 
       return chain.filter(exchange);
@@ -99,7 +100,7 @@ public class AuthorizationHeaderFilter extends
       Jwts.parser().verifyWith(key).build().parseSignedClaims(jwt);
       return true;
     } catch (Exception e) {
-      System.out.println("e = " + e);
+      log.error("e = " + e);
       return false;
     }
   }
