@@ -1,5 +1,7 @@
 package com.pellto.youtoyapigateway.filter;
 
+import com.pellto.youtoyapigateway.handler.ChannelAuthHandler;
+import com.pellto.youtoyapigateway.handler.ChannelManagementAuthHandler;
 import com.pellto.youtoyapigateway.jwt.JwtProvider;
 import java.util.LinkedHashMap;
 import lombok.extern.slf4j.Slf4j;
@@ -15,36 +17,45 @@ import reactor.core.publisher.Mono;
 
 @Component
 @Slf4j
-public class AuthorizationHeaderFilter extends
+public class ChannelAuthorizationFilter extends
     AbstractGatewayFilterFactory<AbstractGatewayFilterFactory.NameConfig> {
 
-  private static final String FILTER_NAME = "AuthorizationHeaderFilter";
-  private final JwtProvider jwtProvider;
+  private static final String FILTER_NAME = "ChannelAuthorizationFilter";
 
-  public AuthorizationHeaderFilter(JwtProvider jwtProvider) {
+  private final JwtProvider jwtProvider;
+  private final ChannelAuthHandler channelAuthHandler;
+  private final ChannelManagementAuthHandler channelManagementAuthHandler;
+
+  public ChannelAuthorizationFilter(JwtProvider jwtProvider,
+      ChannelAuthHandler channelAuthHandler,
+      ChannelManagementAuthHandler channelManagementAuthHandler) {
     super(NameConfig.class);
     this.jwtProvider = jwtProvider;
+    this.channelAuthHandler = channelAuthHandler;
+    this.channelManagementAuthHandler = channelManagementAuthHandler;
   }
 
   @Override
   public GatewayFilter apply(NameConfig config) {
     return (exchange, chain) -> {
       ServerHttpRequest request = exchange.getRequest();
-      if (!request.getHeaders().containsKey(HttpHeaders.AUTHORIZATION)) {
-        return onError(exchange, "no authorization header", HttpStatus.UNAUTHORIZED);
-      }
-
-      String authorizationHeader = request.getHeaders().get(HttpHeaders.AUTHORIZATION).get(0);
-      String jwt = authorizationHeader.replace("Bearer", "").replace(" ", "");
-      if (!jwtProvider.isJwtValid(jwt)) {
-        return onError(exchange, "JWT token is not valid", HttpStatus.UNAUTHORIZED);
-      }
-
       LinkedHashMap<String, Object> body = exchange.getAttribute(
           ServerWebExchangeUtils.CACHED_REQUEST_BODY_ATTR);
+      String authorizationHeader = request.getHeaders().get(HttpHeaders.AUTHORIZATION).get(0);
+      String jwt = authorizationHeader.replace("Bearer", "").replace(" ", "");
+
+      var path = request.getPath();
+      var method = request.getMethod();
       var subject = jwtProvider.getSubject(jwt);
-      if (!jwtProvider.isSubjectValid(subject)) {
-        return onError(exchange, "JWT Subject is not valid", HttpStatus.UNAUTHORIZED);
+
+      if (path.toString().contains("channels") && !channelAuthHandler.checkValidAccess(path, method,
+          body, subject)) {
+        return onError(exchange, "Invalid Channel Access.", HttpStatus.FORBIDDEN);
+      }
+
+      if (path.toString().contains("channelManagements")
+          && !channelManagementAuthHandler.checkValidAccess(path, method, body, subject)) {
+        return onError(exchange, "Invalid Channel Management Access.", HttpStatus.FORBIDDEN);
       }
 
       return chain.filter(exchange);
@@ -56,9 +67,5 @@ public class AuthorizationHeaderFilter extends
     var response = exchange.getResponse();
     response.setStatusCode(httpStatus);
     return response.setComplete();
-  }
-
-  public static class Config {
-
   }
 }

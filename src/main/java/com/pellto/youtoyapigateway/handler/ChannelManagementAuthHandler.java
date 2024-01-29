@@ -4,9 +4,13 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.server.RequestPath;
+import org.springframework.stereotype.Component;
 
+@Component
+@RequiredArgsConstructor
 public class ChannelManagementAuthHandler implements AuthHandler {
 
   @Override

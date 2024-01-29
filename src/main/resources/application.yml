@@ -22,10 +22,31 @@ spring:
         - id: youtoy-service
           uri: http://localhost:8080/
           predicates:
-            - Path=/members/**,
-              /subscribes/**, /channels/**, /memberships/**, /channelManagements/**
+            - Path=/subscribes/**, /memberships/**
           filters:
             - name: CacheRequestBody
               args:
                 bodyClass: java.util.LinkedHashMap
             - AuthorizationHeaderFilter
+
+        - id: youtoy-member-service
+          uri: http://localhost:8080/
+          predicates:
+            - Path=/members/**
+          filters:
+            - name: CacheRequestBody
+              args:
+                bodyClass: java.util.LinkedHashMap
+            - AuthorizationHeaderFilter
+            - MemberAuthorizationFilter
+
+        - id: youtoy-channel-service
+          uri: http://localhost:8080/
+          predicates:
+            - Path=/channels/**, /channelManagements/**
+          filters:
+            - name: CacheRequestBody
+              args:
+                bodyClass: java.util.LinkedHashMap
+            - AuthorizationHeaderFilter
+            - ChannelAuthorizationFilter

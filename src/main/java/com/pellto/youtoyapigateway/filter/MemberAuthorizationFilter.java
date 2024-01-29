@@ -1,5 +1,6 @@
 package com.pellto.youtoyapigateway.filter;
 
+import com.pellto.youtoyapigateway.handler.MemberAuthHandler;
 import com.pellto.youtoyapigateway.jwt.JwtProvider;
 import java.util.LinkedHashMap;
 import lombok.extern.slf4j.Slf4j;
@@ -15,36 +16,35 @@ import reactor.core.publisher.Mono;
 
 @Component
 @Slf4j
-public class AuthorizationHeaderFilter extends
+public class MemberAuthorizationFilter extends
     AbstractGatewayFilterFactory<AbstractGatewayFilterFactory.NameConfig> {
 
-  private static final String FILTER_NAME = "AuthorizationHeaderFilter";
+  private static final String FILTER_NAME = "MemberAuthorizationFilter";
   private final JwtProvider jwtProvider;
+  private final MemberAuthHandler memberAuthHandler;
 
-  public AuthorizationHeaderFilter(JwtProvider jwtProvider) {
+  public MemberAuthorizationFilter(JwtProvider jwtProvider, MemberAuthHandler memberAuthHandler) {
     super(NameConfig.class);
     this.jwtProvider = jwtProvider;
+    this.memberAuthHandler = memberAuthHandler;
   }
 
   @Override
   public GatewayFilter apply(NameConfig config) {
     return (exchange, chain) -> {
       ServerHttpRequest request = exchange.getRequest();
-      if (!request.getHeaders().containsKey(HttpHeaders.AUTHORIZATION)) {
-        return onError(exchange, "no authorization header", HttpStatus.UNAUTHORIZED);
-      }
-
-      String authorizationHeader = request.getHeaders().get(HttpHeaders.AUTHORIZATION).get(0);
-      String jwt = authorizationHeader.replace("Bearer", "").replace(" ", "");
-      if (!jwtProvider.isJwtValid(jwt)) {
-        return onError(exchange, "JWT token is not valid", HttpStatus.UNAUTHORIZED);
-      }
-
       LinkedHashMap<String, Object> body = exchange.getAttribute(
           ServerWebExchangeUtils.CACHED_REQUEST_BODY_ATTR);
+      String authorizationHeader = request.getHeaders().get(HttpHeaders.AUTHORIZATION).get(0);
+      String jwt = authorizationHeader.replace("Bearer", "").replace(" ", "");
+
+      var path = request.getPath();
+      var method = request.getMethod();
       var subject = jwtProvider.getSubject(jwt);
-      if (!jwtProvider.isSubjectValid(subject)) {
-        return onError(exchange, "JWT Subject is not valid", HttpStatus.UNAUTHORIZED);
+
+      if (path.toString().contains("members") && !memberAuthHandler.checkValidAccess(path, method,
+          body, subject)) {
+        return onError(exchange, "Invalid Member Access.", HttpStatus.FORBIDDEN);
       }
 
       return chain.filter(exchange);
@@ -56,9 +56,5 @@ public class AuthorizationHeaderFilter extends
     var response = exchange.getResponse();
     response.setStatusCode(httpStatus);
     return response.setComplete();
-  }
-
-  public static class Config {
-
   }
 }
