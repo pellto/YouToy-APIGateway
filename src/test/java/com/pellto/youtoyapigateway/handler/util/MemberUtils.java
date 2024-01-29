@@ -3,7 +3,7 @@ package com.pellto.youtoyapigateway.handler.util;
 import java.util.LinkedHashMap;
 import org.springframework.http.server.RequestPath;
 
-public class MemberUtil {
+public class MemberUtils {
 
   private static final String MEMBER_EMAIL = "test@test.com";
   private static final String MEMBER_ID = "1";

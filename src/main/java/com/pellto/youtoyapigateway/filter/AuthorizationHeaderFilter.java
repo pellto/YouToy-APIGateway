@@ -1,6 +1,7 @@
 package com.pellto.youtoyapigateway.filter;
 
 import com.pellto.youtoyapigateway.handler.ChannelAuthHandler;
+import com.pellto.youtoyapigateway.handler.ChannelManagementAuthHandler;
 import com.pellto.youtoyapigateway.handler.MemberAuthHandler;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
@@ -27,6 +28,7 @@ public class AuthorizationHeaderFilter extends
 
   private final MemberAuthHandler memberAuthHandler = new MemberAuthHandler();
   private final ChannelAuthHandler channelAuthHandler = new ChannelAuthHandler();
+  private final ChannelManagementAuthHandler channelManagementAuthHandler = new ChannelManagementAuthHandler();
 
   // TODO: setting env or another config
   private static final String SECRET_KEY = "SZPqwwAV8Wzf8Dc5gqduTbdu8Kdou26P"
@@ -82,6 +84,11 @@ public class AuthorizationHeaderFilter extends
       if (path.toString().contains("channels") && !channelAuthHandler.checkValidAccess(path, method,
           body, subject)) {
         return onError(exchange, "Invalid Channel Access.", HttpStatus.FORBIDDEN);
+      }
+
+      if (path.toString().contains("channelManagements")
+          && !channelManagementAuthHandler.checkValidAccess(path, method, body, subject)) {
+        return onError(exchange, "Invalid Channel Management Access.", HttpStatus.FORBIDDEN);
       }
 
       return chain.filter(exchange);

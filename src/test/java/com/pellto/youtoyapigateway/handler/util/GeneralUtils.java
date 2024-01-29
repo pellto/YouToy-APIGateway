@@ -2,7 +2,7 @@ package com.pellto.youtoyapigateway.handler.util;
 
 import org.springframework.http.HttpMethod;
 
-public class GeneralUtil {
+public class GeneralUtils {
 
   private static final HttpMethod GET_METHOD = HttpMethod.GET;
   private static final HttpMethod POST_METHOD = HttpMethod.POST;

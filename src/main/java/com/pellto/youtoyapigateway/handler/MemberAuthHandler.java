@@ -21,12 +21,6 @@ public class MemberAuthHandler implements AuthHandler {
       LinkedHashMap<String, Object> body,
       String subject
   ) {
-//    var email = getMemberEmail(subject);
-//    var role = getMemberRoles(subject);
-//    var memberId = getMemberId(subject);
-//    System.out.println("role = " + role);
-//    System.out.println("email = " + email);
-    System.out.println("body = " + body);
 
     if (HttpMethod.GET.matches(method.name())) {
       return handleGetMethod(subject, path.toString());
@@ -82,8 +76,6 @@ public class MemberAuthHandler implements AuthHandler {
   private boolean handlePatchMethod(String subject,
       LinkedHashMap<String, Object> body) {
     var memberId = getMemberId(subject);
-    var idClass = body.get("id").getClass();
-    System.out.println("idClass = " + idClass);
     if (body.containsKey("id") && body.get("id").toString().equals(memberId)) {
       return true;
     }
@@ -99,12 +91,6 @@ public class MemberAuthHandler implements AuthHandler {
     var _path = removeRootPath(path);
     var splitPath = Arrays.asList(_path.split("/"));
     var variable = splitPath.get(splitPath.size() - 1);
-
-    System.out.println("email = " + email);
-    System.out.println("memberId = " + memberId);
-    System.out.println("_path = " + _path);
-    System.out.println("splitPath = " + splitPath);
-    System.out.println("variable = " + variable);
 
     if (splitPath.contains("details") && variable.equals(memberId)) {
       return true;

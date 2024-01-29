@@ -7,7 +7,7 @@ import java.util.List;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.server.RequestPath;
 
-public class ChannelAuthHandler implements AuthHandler {
+public class ChannelManagementAuthHandler implements AuthHandler {
 
   @Override
   public boolean checkValidAccess(RequestPath path, HttpMethod method,
@@ -26,14 +26,16 @@ public class ChannelAuthHandler implements AuthHandler {
       return handleDeleteMethod();
     }
     if (HttpMethod.POST.matches(method.name())) {
-      return handlePostMethod();
+      return handlePostMethod(subject, body);
     }
     return false;
   }
 
-  private boolean handlePostMethod() {
-    System.out.println("POST METHOD");
-    return true;
+  // "/channelManagements/invite" -> inviteMember
+  private boolean handlePostMethod(String subject, LinkedHashMap<String, Object> body) {
+    var channelRoles = getChannelRoleHashMap(subject);
+    var targetChannel = body.get("channelId").toString();
+    return hasOwnerRoles(channelRoles, targetChannel);
   }
 
   private boolean handleDeleteMethod() {
@@ -46,20 +48,38 @@ public class ChannelAuthHandler implements AuthHandler {
     return true;
   }
 
+  // "/channelManagements" -> changeLevel
   private boolean handlePatchMethod(String subject, LinkedHashMap<String, Object> body) {
-    return false;
+    var channelRoles = getChannelRoleHashMap(subject);
+    var targetChannelId = body.get("channelId").toString();
+    var targetLevel = body.get("level").toString();
+    switch (targetLevel) {
+      case ("VIEWER") -> {
+        return hasCoWorkerRoles(channelRoles, targetChannelId);
+      }
+      case ("CO_WORKER"), ("OWNER") -> {
+        return hasOwnerRoles(channelRoles, targetChannelId);
+      }
+      default -> {
+        return false;
+      }
+    }
   }
 
-  // "/channels/{channelId}" -> getChannel
+  // "/channelManagements/member/{memberId}" -> getChannelManagement
   private boolean handleGetMethod(String subject, String path) {
-    var listChannelRoles = getChannelRoles(subject);
-    var hashMapChannelRoles = convertToHashmap(listChannelRoles);
-    var pathChannelId = getChannelIdFromPath(path);
-    return hashMapChannelRoles.containsKey(pathChannelId);
+    var memberId = getMemberId(subject);
+    var splitPath = Arrays.asList(path.split("/"));
+    var targetMemberId = splitPath.get(splitPath.size() - 1);
+    return memberId.equals(targetMemberId);
   }
 
   private String getChannelIdFromPath(String path) {
     return path.split("/")[2];
+  }
+
+  private HashMap<String, String> getChannelRoleHashMap(String subject) {
+    return convertToHashmap(getChannelRoles(subject));
   }
 
   private HashMap<String, String> convertToHashmap(List<String> listChannelRoles) {
@@ -74,5 +94,32 @@ public class ChannelAuthHandler implements AuthHandler {
   private List<String> getChannelRoles(String subject) {
     var stringRoles = subject.split("#")[1].replace("[", "").replace("]", "");
     return Arrays.asList(stringRoles.split(","));
+  }
+
+  private boolean hasOwnerRoles(HashMap<String, String> channelRoles,
+      String targetChannelId) {
+    if (!channelRoles.containsKey(targetChannelId)) {
+      return false;
+    }
+    var role = channelRoles.get(targetChannelId);
+    return role.equals("OWNER");
+  }
+
+  private boolean hasCoWorkerRoles(HashMap<String, String> channelRoles,
+      String targetChannelId) {
+    if (!channelRoles.containsKey(targetChannelId)) {
+      return false;
+    }
+    var role = channelRoles.get(targetChannelId);
+    return role.equals("OWNER") || role.equals("CO_WORKER");
+  }
+
+  private boolean hasViewerRoles(HashMap<String, String> channelRoles,
+      String targetChannelId) {
+    return channelRoles.containsKey(targetChannelId);
+  }
+
+  private String getMemberId(String subject) {
+    return subject.split("#")[0].substring(1).split("\\[")[1].replace("]", "");
   }
 }
